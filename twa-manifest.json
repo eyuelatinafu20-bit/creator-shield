@@ -1,0 +1,58 @@
+{
+  "packageId": "com.creatorshields.app",
+  "host": "creatorshields.com",
+  "name": "J Creator Shield",
+  "launcherName": "J. Shield",
+  "display": "standalone",
+  "themeColor": "#00C8F0",
+  "navigationColor": "#05080f",
+  "navigationColorDark": "#05080f",
+  "navigationDividerColor": "#05080f",
+  "navigationDividerColorDark": "#05080f",
+  "backgroundColor": "#05080f",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://creatorshields.com/icon-512.png",
+  "maskableIconUrl": "https://creatorshields.com/icon-512.png",
+  "monochromeIconUrl": "https://creatorshields.com/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "creatorshield"
+  },
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://creatorshields.com/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://creatorshields.com/",
+  "minSdkVersion": 19,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "shortcuts": [
+    {
+      "name": "AI Scan",
+      "short_name": "Scan",
+      "url": "/?tab=scan",
+      "icons": [{ "src": "https://creatorshields.com/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Defense Center",
+      "short_name": "Defense",
+      "url": "/?tab=defense",
+      "icons": [{ "src": "https://creatorshields.com/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
