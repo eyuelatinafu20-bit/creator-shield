@@ -1,0 +1,67 @@
+name: Build Android TWA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair \
+            -alias creatorshield \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "CreatorShield2026!" \
+            -keypass "CreatorShield2026!" \
+            -dname "CN=Creator Shield, OU=Developer, O=Creator Shield, L=Addis Ababa, ST=Addis Ababa, C=ET" \
+            -keystore android-twa/app/android.keystore
+
+          echo ""
+          echo "========================================"
+          echo " SHA-256 Fingerprint — ADD TO assetlinks.json"
+          echo "========================================"
+          keytool -list -v \
+            -keystore android-twa/app/android.keystore \
+            -alias creatorshield \
+            -storepass "CreatorShield2026!" 2>&1 | grep "SHA256:" | tee sha256-fingerprint.txt
+          echo "========================================"
+
+      - name: Build release APK
+        working-directory: android-twa
+        run: |
+          gradle assembleRelease \
+            -PKEYSTORE_PATH=app/android.keystore \
+            -PKEYSTORE_PASS="CreatorShield2026!" \
+            -PKEY_ALIAS=creatorshield \
+            -PKEY_PASS="CreatorShield2026!" \
+            --stacktrace
+
+      - name: Upload APK + SHA-256 fingerprint
+        uses: actions/upload-artifact@v4
+        with:
+          name: creator-shield-android-v${{ github.run_number }}
+          path: |
+            android-twa/app/build/outputs/apk/release/*.apk
+            sha256-fingerprint.txt
+          retention-days: 30
