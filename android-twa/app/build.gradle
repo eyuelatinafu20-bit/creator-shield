@@ -35,7 +35,7 @@ def twaFingerprintList = (readConfig('TWA_SHA256_FINGERPRINTS') ?: '')
     .collect { it.trim() }
     .findAll { it }
 def fingerprintPattern = ~/^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$/
-def invalidFingerprints = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
+def invalidFingerprintFormats = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
 def assetStatementsJson = JsonOutput.toJson([[
     relation: ['delegate_permission/common.handle_all_urls'],
     target: [
@@ -47,22 +47,22 @@ def assetStatementsJson = JsonOutput.toJson([[
 def escapedAssetStatements = XmlUtil.escapeXml(assetStatementsJson)
 
 def validateReleaseConfig = {
-    def missing = []
+    def configErrors = []
 
     if (!releaseSigningReady) {
-        missing << 'KEYSTORE_PATH, KEYSTORE_PASS, KEY_ALIAS, KEY_PASS'
+        configErrors << 'KEYSTORE_PATH, KEYSTORE_PASS, KEY_ALIAS, KEY_PASS'
     }
 
     if (twaFingerprintList.isEmpty()) {
-        missing << 'TWA_SHA256_FINGERPRINTS'
+        configErrors << 'TWA_SHA256_FINGERPRINTS'
     }
 
-    if (!invalidFingerprints.isEmpty()) {
-        missing << "valid TWA_SHA256_FINGERPRINTS values (${invalidFingerprints.join(', ')})"
+    if (!invalidFingerprintFormats.isEmpty()) {
+        configErrors << "valid TWA_SHA256_FINGERPRINTS values (${invalidFingerprintFormats.join(', ')})"
     }
 
-    if (!missing.isEmpty()) {
-        throw new GradleException("Release builds require the following configuration: ${missing.join('; ')}")
+    if (!configErrors.isEmpty()) {
+        throw new GradleException("Release builds require the following configuration: ${configErrors.join('; ')}")
     }
 }
 
