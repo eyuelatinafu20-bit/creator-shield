@@ -4,7 +4,7 @@ This repository contains the Android Trusted Web Activity wrapper for `https://c
 
 ## Build
 
-The project is built from the `android-twa` directory with Gradle 8.2 and Java 17.
+The project is built from the `android-twa` directory with Gradle 8.2 and Java 17. By default it uses Android SDK 34.
 
 Example local commands:
 
@@ -34,4 +34,4 @@ export TWA_SHA256_FINGERPRINTS=AA:BB:CC:...,11:22:33:...
 gradle -p android-twa assembleRelease
 ```
 
-Debug builds do not require signing secrets.
+Debug builds do not require signing secrets. Verified app-link/TWA association only becomes active after `TWA_SHA256_FINGERPRINTS` is provided.

@@ -13,6 +13,8 @@ def readConfig = { String name ->
 }
 
 def applicationPackageId = "com.creatorshields.app"
+def compileSdk = (readConfig('ANDROID_COMPILE_SDK') ?: '34') as Integer
+def targetSdk = (readConfig('ANDROID_TARGET_SDK') ?: '34') as Integer
 def keystorePath = readConfig('KEYSTORE_PATH')
 def keystorePassword = readConfig('KEYSTORE_PASS')
 def keyAliasName = readConfig('KEY_ALIAS')
@@ -51,13 +53,13 @@ def validateReleaseConfig = {
 }
 
 android {
-    compileSdkVersion 34
+    compileSdkVersion compileSdk
     namespace applicationPackageId
 
     defaultConfig {
         applicationId applicationPackageId
         minSdkVersion 19
-        targetSdkVersion 34
+        targetSdkVersion targetSdk
         versionCode 1
         versionName "1.0.0"
         resValue "string", "asset_statements", "\"${escapedAssetStatements}\""
