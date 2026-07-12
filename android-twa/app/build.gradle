@@ -3,20 +3,29 @@ import groovy.xml.XmlUtil
 
 apply plugin: 'com.android.application'
 
-def readConfig = { String name ->
-    def propertyValue = project.findProperty(name)?.toString()?.trim()
-    if (propertyValue && propertyValue.any { Character.isISOControl((char) it) }) {
+def validateConfigValue = { String name, String value ->
+    if (value && value.any { Character.isISOControl((char) it) }) {
         throw new GradleException("Invalid control characters in configuration: ${name}")
     }
+
+    return value
+}
+
+def readConfig = { String name ->
+    def propertyValue = validateConfigValue(name, project.findProperty(name)?.toString()?.trim())
     if (propertyValue) {
         return propertyValue
     }
 
-    def envValue = System.getenv(name)?.trim()
-    if (envValue && envValue.any { Character.isISOControl((char) it) }) {
-        throw new GradleException("Invalid control characters in configuration: ${name}")
-    }
+    def envValue = validateConfigValue(name, System.getenv(name)?.trim())
     return envValue ?: null
+}
+
+def parseCommaSeparatedConfig = { String name ->
+    (readConfig(name) ?: '')
+        .split(',')
+        .collect { it.trim() }
+        .findAll { it }
 }
 
 def requireConfig = { String name ->
@@ -36,10 +45,8 @@ def keystorePassword = readConfig('KEYSTORE_PASS')
 def keyAliasName = readConfig('KEY_ALIAS')
 def keyPasswordValue = readConfig('KEY_PASS')
 def releaseSigningReady = [keystorePath, keystorePassword, keyAliasName, keyPasswordValue].every { it }
-def twaFingerprintList = (readConfig('TWA_SHA256_FINGERPRINTS') ?: '')
-    .split(',')
-    .collect { it.trim() }
-    .findAll { it }
+def twaFingerprintList = parseCommaSeparatedConfig('TWA_SHA256_FINGERPRINTS')
+// SHA-256 fingerprints are expected as 32 colon-separated hexadecimal byte pairs.
 def fingerprintPattern = ~/^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$/
 def malformedFingerprints = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
 def assetStatementsJson = JsonOutput.toJson([[

@@ -33,6 +33,7 @@ jobs:
 
       - name: Load Android build config
         run: |
+          # Export the shared Android SDK settings from gradle.properties for the CI steps below.
           while IFS='=' read -r key value; do
             case "$key" in
               ANDROID_COMPILE_SDK|ANDROID_TARGET_SDK)
