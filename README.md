@@ -4,7 +4,7 @@ This repository contains the Android Trusted Web Activity wrapper for `https://c
 
 ## Build
 
-The project is built from the `android-twa` directory with Gradle 8.2 and Java 17. By default it uses Android SDK 34.
+The project is built from the `android-twa` directory with Gradle 8.2 and Java 17. CI and the Gradle wrapper settings are pinned to Gradle 8.2 for Android Gradle Plugin 8.2.2 compatibility.
 
 Example local commands:
 
