@@ -5,11 +5,17 @@ apply plugin: 'com.android.application'
 
 def readConfig = { String name ->
     def propertyValue = project.findProperty(name)?.toString()?.trim()
+    if (propertyValue && propertyValue.any { Character.isISOControl((char) it) }) {
+        throw new GradleException("Invalid control characters in configuration: ${name}")
+    }
     if (propertyValue) {
         return propertyValue
     }
 
     def envValue = System.getenv(name)?.trim()
+    if (envValue && envValue.any { Character.isISOControl((char) it) }) {
+        throw new GradleException("Invalid control characters in configuration: ${name}")
+    }
     return envValue ?: null
 }
 
@@ -35,7 +41,7 @@ def twaFingerprintList = (readConfig('TWA_SHA256_FINGERPRINTS') ?: '')
     .collect { it.trim() }
     .findAll { it }
 def fingerprintPattern = ~/^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$/
-def invalidFingerprintFormats = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
+def malformedFingerprints = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
 def assetStatementsJson = JsonOutput.toJson([[
     relation: ['delegate_permission/common.handle_all_urls'],
     target: [
@@ -57,8 +63,8 @@ def validateReleaseConfig = {
         configErrors << 'TWA_SHA256_FINGERPRINTS'
     }
 
-    if (!invalidFingerprintFormats.isEmpty()) {
-        configErrors << "valid TWA_SHA256_FINGERPRINTS values (${invalidFingerprintFormats.join(', ')})"
+    if (!malformedFingerprints.isEmpty()) {
+        configErrors << "invalid TWA_SHA256_FINGERPRINTS format: ${malformedFingerprints.join(', ')}"
     }
 
     if (!configErrors.isEmpty()) {

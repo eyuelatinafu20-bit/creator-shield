@@ -46,6 +46,8 @@ jobs:
                 ;;
             esac
 
+            [[ -n "$value" ]] || continue
+
             printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
           done < android-twa/gradle.properties
 
