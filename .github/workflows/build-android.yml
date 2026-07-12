@@ -32,7 +32,24 @@ jobs:
           gradle-version: 8.2
 
       - name: Load Android build config
-        run: grep -E '^(ANDROID_COMPILE_SDK|ANDROID_TARGET_SDK|ANDROID_BUILD_TOOLS)=' android-twa/gradle.properties >> "$GITHUB_ENV"
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          keys = {"ANDROID_COMPILE_SDK", "ANDROID_TARGET_SDK", "ANDROID_BUILD_TOOLS"}
+          env_file = Path(os.environ["GITHUB_ENV"])
+
+          for raw_line in Path("android-twa/gradle.properties").read_text().splitlines():
+              line = raw_line.strip()
+              if not line or line.startswith("#") or "=" not in line:
+                  continue
+
+              key, value = line.split("=", 1)
+              if key in keys:
+                  with env_file.open("a", encoding="utf-8") as handle:
+                      handle.write(f"{key}={value}\n")
+          PY
 
       - name: Install Android platform
         run: sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
