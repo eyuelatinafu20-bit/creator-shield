@@ -91,7 +91,7 @@ android {
 }
 
 afterEvaluate {
-    tasks.matching { task -> task.name.toLowerCase().contains('release') }.configureEach {
+    tasks.matching { task -> task.name == 'preReleaseBuild' }.configureEach {
         doFirst {
             validateReleaseConfig()
         }

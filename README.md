@@ -4,7 +4,7 @@ This repository contains the Android Trusted Web Activity wrapper for `https://c
 
 ## Build
 
-The project is built from `/home/runner/work/creator-shield/creator-shield/android-twa` with Gradle 8.2 and Java 17.
+The project is built from the `android-twa` directory with Gradle 8.2 and Java 17.
 
 Example local commands:
 
