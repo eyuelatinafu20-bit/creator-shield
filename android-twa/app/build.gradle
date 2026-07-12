@@ -89,7 +89,7 @@ android {
         targetSdkVersion targetSdk
         versionCode 1
         versionName "1.0.0"
-        resValue "string", "asset_statements", "\"${escapedAssetStatements}\""
+        resValue "string", "asset_statements", escapedAssetStatements
     }
 
     signingConfigs {
