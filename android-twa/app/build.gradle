@@ -1,36 +1,135 @@
+import groovy.json.JsonOutput
+import groovy.xml.XmlUtil
+
 apply plugin: 'com.android.application'
 
+def validateConfigValue = { String name, String value ->
+    if (value && value.any { Character.isISOControl((char) it) }) {
+        throw new GradleException("Invalid control characters in configuration: ${name}")
+    }
+
+    return value
+}
+
+def readConfig = { String name ->
+    def propertyValue = validateConfigValue(name, project.findProperty(name)?.toString()?.trim())
+    if (propertyValue) {
+        return propertyValue
+    }
+
+    def envValue = validateConfigValue(name, System.getenv(name)?.trim())
+    return envValue ?: null
+}
+
+def parseCommaSeparatedConfig = { String name ->
+    (readConfig(name) ?: '')
+        .split(',')
+        .collect { it.trim() }
+        .findAll { it }
+}
+
+def requireConfig = { String name ->
+    def value = readConfig(name)
+    if (!value) {
+        throw new GradleException("Missing required configuration: ${name}")
+    }
+
+    return value
+}
+
+def applicationPackageId = "com.creatorshields.app"
+def compileSdk = requireConfig('ANDROID_COMPILE_SDK') as Integer
+def targetSdk = requireConfig('ANDROID_TARGET_SDK') as Integer
+def keystorePath = readConfig('KEYSTORE_PATH')
+def keystorePassword = readConfig('KEYSTORE_PASS')
+def keyAliasName = readConfig('KEY_ALIAS')
+def keyPasswordValue = readConfig('KEY_PASS')
+def releaseSigningReady = [keystorePath, keystorePassword, keyAliasName, keyPasswordValue].every { it }
+def twaFingerprintList = parseCommaSeparatedConfig('TWA_SHA256_FINGERPRINTS')
+// SHA-256 fingerprints are expected as 32 colon-separated hexadecimal byte pairs.
+// Android's asset-links tooling uses SHA-256 fingerprints as colon-delimited byte pairs.
+def fingerprintPattern = ~/^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$/
+def malformedFingerprints = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
+def assetStatementsJson = JsonOutput.toJson([[
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: [
+        namespace: 'android_app',
+        package_name: applicationPackageId,
+        sha256_cert_fingerprints: twaFingerprintList
+    ]
+]])
+// resValue writes directly into generated XML resources, so the JSON must be XML-escaped first.
+def escapedAssetStatements = XmlUtil.escapeXml(assetStatementsJson)
+
+def validateReleaseConfig = {
+    def configErrors = []
+
+    if (!releaseSigningReady) {
+        configErrors << 'KEYSTORE_PATH, KEYSTORE_PASS, KEY_ALIAS, KEY_PASS'
+    }
+
+    if (twaFingerprintList.isEmpty()) {
+        configErrors << 'TWA_SHA256_FINGERPRINTS'
+    }
+
+    if (!malformedFingerprints.isEmpty()) {
+        configErrors << "invalid TWA_SHA256_FINGERPRINTS format: ${malformedFingerprints.join(', ')}"
+    }
+
+    if (!configErrors.isEmpty()) {
+        throw new GradleException("Release builds require the following configuration: ${configErrors.join('; ')}")
+    }
+}
+
 android {
-    compileSdkVersion 34
-    namespace 'com.creatorshields.app'
+    compileSdkVersion compileSdk
+    namespace applicationPackageId
 
     defaultConfig {
-        applicationId "com.creatorshields.app"
+        applicationId applicationPackageId
         minSdkVersion 19
-        targetSdkVersion 34
+        targetSdkVersion targetSdk
         versionCode 1
         versionName "1.0.0"
+        resValue "string", "asset_statements", escapedAssetStatements
     }
 
     signingConfigs {
-        release {
-            storeFile file(project.findProperty('KEYSTORE_PATH') ?: 'android.keystore')
-            storePassword project.findProperty('KEYSTORE_PASS') ?: 'CreatorShield2026!'
-            keyAlias project.findProperty('KEY_ALIAS') ?: 'creatorshield'
-            keyPassword project.findProperty('KEY_PASS') ?: 'CreatorShield2026!'
+        if (releaseSigningReady) {
+            release {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keyAliasName
+                keyPassword keyPasswordValue
+            }
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+
+            if (releaseSigningReady) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+afterEvaluate {
+    def verifyReleaseConfiguration = tasks.register('verifyReleaseConfiguration') {
+        doLast {
+            validateReleaseConfig()
+        }
+    }
+
+    tasks.matching { task -> task.name in ['assembleRelease', 'bundleRelease'] }.configureEach {
+        dependsOn verifyReleaseConfiguration
     }
 }
 

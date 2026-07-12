@@ -9,27 +9,54 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          node-version: 20
+          distribution: temurin
+          java-version: 17
+          cache: gradle
 
-      - name: Install dependencies
-        run: npm ci || npm install
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Lint
-        run: npm run lint || echo "No lint script"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.2
 
-      - name: Type check
-        run: npm run typecheck || echo "No typecheck script"
+      - name: Load Android build config
+        run: |
+          # Export the shared Android SDK settings from gradle.properties for the CI steps below.
+          while IFS='=' read -r key value; do
+            case "$key" in
+              ANDROID_COMPILE_SDK|ANDROID_TARGET_SDK)
+                [[ "$value" =~ ^[0-9]+$ ]] || { echo "Invalid $key value: $value"; exit 1; }
+                ;;
+              ANDROID_BUILD_TOOLS)
+                [[ "$value" =~ ^[0-9]+(\.[0-9]+){2}$ ]] || { echo "Invalid $key value: $value"; exit 1; }
+                ;;
+              *)
+                continue
+                ;;
+            esac
 
-      - name: Run tests
-        run: npm test || echo "No tests"
+            [[ -n "$value" ]] || continue
 
-      - name: Build
-        run: npm run build || echo "No build script"
+            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+          done < android-twa/gradle.properties
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Lint debug build
+        run: gradle -p android-twa lintDebug
+
+      - name: Assemble debug build
+        run: gradle -p android-twa assembleDebug
