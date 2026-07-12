@@ -47,6 +47,7 @@ def keyPasswordValue = readConfig('KEY_PASS')
 def releaseSigningReady = [keystorePath, keystorePassword, keyAliasName, keyPasswordValue].every { it }
 def twaFingerprintList = parseCommaSeparatedConfig('TWA_SHA256_FINGERPRINTS')
 // SHA-256 fingerprints are expected as 32 colon-separated hexadecimal byte pairs.
+// Android's asset-links tooling uses SHA-256 fingerprints as colon-delimited byte pairs.
 def fingerprintPattern = ~/^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){31}$/
 def malformedFingerprints = twaFingerprintList.findAll { fingerprint -> !(fingerprint ==~ fingerprintPattern) }
 def assetStatementsJson = JsonOutput.toJson([[
@@ -57,6 +58,7 @@ def assetStatementsJson = JsonOutput.toJson([[
         sha256_cert_fingerprints: twaFingerprintList
     ]
 ]])
+// resValue writes directly into generated XML resources, so the JSON must be XML-escaped first.
 def escapedAssetStatements = XmlUtil.escapeXml(assetStatementsJson)
 
 def validateReleaseConfig = {
